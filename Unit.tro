@@ -1,0 +1,314 @@
+// Enes HARMANCI - Çatı Katı Projesi - Chat Uniti
+
+var 
+ MyForm : TCLForm;
+ MyMQTT : TclMQTT;
+ BtnSend: TclProButton;
+ LblDisplay: TclLabel;
+ msjGiris, chatEkrani: TclMemo;
+ msjBoxPanel, bigPanel : TclProPanel;
+ clomosyImg : TclProImg;
+ getMsjLayout : TclLayout;
+ msj : String;
+ testCombo : TClComboBox;
+ QMemList:TclJSonQuery;
+ selectQuery : TclSqlQuery;
+ ilanSahipID1: Integer;
+ ilanMesaj: String;
+ gelenGlobalListesi: TclStringList;
+ ilanID, tiklananIlanaSonMsjAtanID : Integer;
+ 
+void VirtualKeyboardShow;
+{
+  getMsjLayout.Margins.Bottom = MyForm.clVKBoundsHeight;
+}
+
+void VirtualKeyboardHidden;
+{
+   getMsjLayout.Margins.Bottom = 5;
+}
+
+  //Bağlantı kontrolü
+void MyMQTTStatusChanged; 
+{ 
+    if (MyMQTT.Connected) 
+       { 
+         LblDisplay.Text = 'Connected' ;
+         LblDisplay.TextSettings.FontColor = clAlphaColor.clHexToColor('#026b00');
+       }
+       Else 
+       { 
+         LblDisplay.Text = 'Not Connected';
+         LblDisplay.TextSettings.FontColor = clAlphaColor.clHexToColor('#7a1209');
+       try
+          LblDisplay.Text = 'Trying To Connect';
+          if (Not MyMQTT.Connected)
+          {
+           MyMQTT.Connect;
+          } 
+       except
+         ShowMessage('İnternet bağlantınızı kontrol ediniz... ' + 'Exception Class: ' + LastExceptionClassName + ' Exception Message: ' + LastExceptionMessage);
+       }
+     }
+}
+ 
+void MyMQTTPublishReceived;
+{
+   msj = Clomosy.AppUserDisplayName;
+   if (MyMQTT.ReceivedAlright) 
+   {
+
+     chatEkrani.Lines.Add('                   ' + MyMQTT.ReceivedMessage); 
+   }
+}
+ 
+void BtnSendClick; //mesajı gönderme işlemi.
+{
+  if (Trim(msjGiris.Text) == '')
+    ShowMessage('Lütfen mesaj kısmını boş bırakmayınız.');
+  else
+  {
+      try
+        MyMQTT.Send(Clomosy.AppUserDisplayName+' : '+msjGiris.Text);
+        chatEkrani.Lines.Add(Clomosy.StringListItemString(gelenGlobalListesi,0)+': '+msjGiris.Text);
+        msjGiris.Text = '';
+        getMsjLayout.Align=alBottom;
+        chatEkrani.setFocus;
+        
+      except
+          ShowMessage('Mesaj gönderilemedi... İnternet bağlantınızı kontrol ediniz... ' + 'Exception Class: ' + LastExceptionClassName + ' Exception Message: ' + LastExceptionMessage);
+        }
+          
+          //mesaj atan - alan işlemi.
+          //tıklanan ilan_İD'de mesaj var mı?
+        try
+          selectQuery.Sql.Text = 'SELECT mesaj FROM Chat WHERE ilanID = '+Clomosy.StringListItemString(gelenGlobalListesi,1);
+          selectQuery.Open;
+          
+            if(selectQuery.Found) //mesaj var ise.
+            {
+                  //önce son mesajı kim attı bu veriyi çekmek lazım.
+                try
+                    selectQuery.Sql.Text = 'SELECT TOP 1 mesajAtan FROM Chat WHERE ilanID = '+Clomosy.StringListItemString(gelenGlobalListesi,1)+'ORDER BY chatID DESC';
+                    selectQuery.Open;
+                    
+                      if(selectQuery.Found)
+                      {
+                        tiklananIlanaSonMsjAtanID = selectQuery.FieldByName('mesajAtan').AsInteger;
+                        ShowMessage('bu ilana son mesaj atan id no: '+IntToStr(tiklananIlanaSonMsjAtanID)+ LastExceptionMessage);
+                      }
+                      else
+                      {
+                        ShowMessage('ilana mesaj atan son id numarasını alamadık.');
+                      }
+                  except
+                    ShowMessage('HATA '+LastExceptionMessage);
+                    selectQuery.Free;
+                    selectQuery.Close;
+                  }
+                //FORUM KISMI
+                if(Clomosy.StringListItemString(gelenGlobalListesi,0)==IntToStr(ilanSahipID1)) //giriş yapan ilanı veren mi?
+                  { 
+                    try                                                                                                                                                              //SON MESAJI ATANIN ID'Sİ OLMALI
+                      Clomosy.DBSQLServerQuery.Sql.Text = 'INSERT INTO Chat (mesajAtan, mesajAlan, mesaj , ilanID) VALUES ('+Clomosy.StringListItemString(gelenGlobalListesi,0)+', '+QuotedStr(tiklananIlanaSonMsjAtanID)+','+QuotedStr(chatEkrani.Text)+','+Clomosy.StringListItemString(gelenGlobalListesi,1)+')';
+                        Clomosy.DBSQLServerQuery.ExecSql
+                      ShowMessage('Yükleme İşlemi Başarılı');
+                  
+                    except
+                     ShowMessage('Yükleme İşlemi Başarısız!!' + LastExceptionMessage);
+                  
+                    }   
+                  }
+                 else //giriş yapan ilanı veren değil ise yani.
+                  {
+                    try                                                                                                                                                               //ilan sahibi
+                        Clomosy.DBSQLServerQuery.Sql.Text = 'INSERT INTO Chat (mesajAtan, mesajAlan, mesaj , ilanID) VALUES ('+Clomosy.StringListItemString(gelenGlobalListesi,0)+', '+QuotedStr(ilanSahipID1)+','+QuotedStr(chatEkrani.Text)+','+Clomosy.StringListItemString(gelenGlobalListesi,1)+')';
+                          Clomosy.DBSQLServerQuery.ExecSql
+                        ShowMessage('Yükleme İşlemi Başarılı');
+                    
+                      except
+                       ShowMessage('Yükleme İşlemi Başarısız!!' + LastExceptionMessage);
+                    
+                      }   
+                  }
+            }
+            else //mesaj yok ise yeni mesaj eklenmesi lazım. atan -> giriş yapan. alan -> ilan sahibi
+            {
+                // 1. Kısım >> mesaj yoksa!! ilk işlem bu olmalı.
+              try
+                Clomosy.DBSQLServerQuery.Sql.Text = 'INSERT INTO Chat (mesajAtan, mesajAlan, mesaj , ilanID) VALUES ('+Clomosy.StringListItemString(gelenGlobalListesi,0)+', '+QuotedStr(ilanSahipID1)+','+QuotedStr(chatEkrani.Text)+','+Clomosy.StringListItemString(gelenGlobalListesi,1)+')';
+                  Clomosy.DBSQLServerQuery.ExecSql
+                ShowMessage('Yükleme İşlemi Başarılı');
+                
+              except
+                ShowMessage('Yükleme İşlemi Başarısız!!' + LastExceptionMessage);
+                
+              }
+            }
+        except
+          ShowMessage('HATA '+LastExceptionMessage);
+          selectQuery.Free;
+          selectQuery.Close;
+        }
+        
+        /*
+        else //vt'de mesaj varsa yeni mesaj güncelleme işlemi. Bakılacak sonra.
+        {
+          try
+                // Mevcut mesajı güncelle
+                Clomosy.DBSQLServerQuery.Sql.Text ='UPDATE Chat SET mesaj ='+QuotedStr(chatEkrani.Text)+' WHERE mesajAtan = ' + Clomosy.StringListItemString(gelenGlobalListesi,0) + ' AND mesajAlan = ' + QuotedStr(ilanSahipID1) + ' AND ilanID = ' + Clomosy.StringListItemString(gelenGlobalListesi,1); 
+                Clomosy.DBSQLServerQuery.ExecSql;
+                ShowMessage('Mesaj başarıyla güncellendi.');
+            
+            except
+            
+                ShowMessage('Mesaj güncelleme işlemi başarısız oldu: ' + LastExceptionMessage);
+            }
+        }
+        */
+  }
+}
+
+
+{
+
+ MyForm = TCLForm.Create(Self);
+ MyForm.SetFormColor('#5d0c1d','#3d3d3d',clGVertical);
+
+ MyForm.AddNewEvent(MyForm,tbeOnVirtualKeyboardShown,'VirtualKeyboardShow');
+ MyForm.AddNewEvent(MyForm,tbeOnVirtualKeyboardHidden,'VirtualKeyboardHidden');
+
+ bigPanel=MyForm.AddNewProPanel(MyForm,'bigPanel');
+   clComponent.SetupComponent(bigPanel,'{"Align" : "Client",
+        "MarginBottom":10,
+        "MarginTop":10,
+        "MarginLeft":10,
+        "MarginRight":10,
+        "RoundHeight":10,
+        "RoundWidth":15,
+        "BorderColor":"#0d0d0d",
+        "BorderWidth":2}');
+
+ LblDisplay= MyForm.AddNewLabel(bigPanel,'LblDisplay','--');
+    LblDisplay.Align = alTop;
+    LblDisplay.Visible = True;
+    LblDisplay.Margins.Left = 10;
+    LblDisplay.StyledSettings = ssFamily;
+    LblDisplay.TextSettings.Font.Size = 13;
+
+ MyMQTT = MyForm.AddNewMQTTConnection(bigPanel,'MyMQTT');
+ 
+ 
+ MyForm.AddNewEvent(MyMQTT,tbeOnMQTTStatusChanged,'MyMQTTStatusChanged'); 
+ 
+
+ MyForm.AddNewEvent(MyMQTT,tbeOnMQTTPublishReceived,'MyMQTTPublishReceived');
+
+ MyMQTT.Channel = 'chat';
+ MyMQTT.Connect;
+
+
+ chatEkrani= MyForm.AddNewMemo(bigPanel,'chatEkrani','');
+   chatEkrani.Align = alClient;
+   chatEkrani.Margins.Top = 10;
+   chatEkrani.Margins.Bottom = 10;
+   chatEkrani.Margins.Left = 10;
+   chatEkrani.Margins.Right = 10;
+   chatEkrani.TextSettings.WordWrap = True;
+   chatEkrani.ReadOnly = True;
+   
+
+ getMsjLayout = MyForm.AddNewLayout(bigPanel,'getMsjLayout');
+   getMsjLayout.Align=alBottom;
+   getMsjLayout.Height = 90;
+   getMsjLayout.Margins.Bottom = 5;
+   getMsjLayout.Width = 400;
+   getMsjLayout.Margins.Left = 10;
+   getMsjLayout.Margins.Right = 10;
+
+ BtnSend = MyForm.AddNewProButton(getMsjLayout,'BtnSend','');
+    clComponent.SetupComponent(BtnSend,'{"Align" : "Right" ,
+       "MarginBottom":15,
+       "Width" :80,
+       "MarginTop" : 15,
+       "MarginLeft" : 5,
+       "Height":60,
+       "BorderColor":"#ffffff"}');
+     
+
+ msjBoxPanel=MyForm.AddNewProPanel(getMsjLayout,'msjBoxPanel');
+  clComponent.SetupComponent(msjBoxPanel,'{"Align" : "Client",
+     "RoundHeight":15,
+     "Height":'+IntToStr(getMsjLayout.Height/2)+',
+     "MarginLeft":10,
+     "MarginBottom":20,
+     "MarginTop":20,
+     "RoundWidth":15,
+     "BorderColor":"#5d0c1d",
+     "BorderWidth":1}');
+
+ msjGiris= MyForm.AddNewMemo(msjBoxPanel,'msjGiris','');
+   msjGiris.Align = alClient;
+   msjGiris.Margins.Left = 5;
+   msjGiris.Margins.Right = 5;
+   msjGiris.Margins.Bottom = 5;
+   msjGiris.Margins.Top = 5;
+   msjGiris.TextSettings.WordWrap = True;
+  
+  
+ selectQuery=TclSqlQuery.Create(nil);
+ Clomosy.DBSQLServerConnect('Sql Server', '192.168.1.187', 'sa', '12323123', 'Clomosy',8080);
+ selectQuery.Connection = Clomosy.DBSQLServerConnection;
+  
+
+  gelenGlobalListesi = Clomosy.StringListNew;
+  gelenGlobalListesi = Clomosy.GlobalVariableStringList;
+
+ try
+    selectQuery.Sql.Text = 'SELECT ilanSahipID FROM YuklenenEvler WHERE ID = '+Clomosy.StringListItemString(gelenGlobalListesi,1);
+    selectQuery.Open;
+    
+      if(selectQuery.Found)
+      {
+        ilanSahipID1 = selectQuery.FieldByName('ilanSahipID').AsInteger;
+      }
+      else
+      {
+        ShowMessage('Hata: '+LastExceptionMessage);
+      }
+  except
+    ShowMessage('HATA '+LastExceptionMessage);
+    selectQuery.Free;
+    selectQuery.Close;
+  }
+/*
+  //mesajı alan göre mesajları ekrana getirmesi. BURASI OLMADI.
+  try
+    selectQuery.Sql.Text = 'SELECT mesaj FROM Chat WHERE mesajAlan = '+Clomosy.StringListItemString(gelenGlobalListesi,1);
+    selectQuery.Open;
+      if(selectQuery.Found)
+      {
+        ilanMesaj = selectQuery.FieldByName('mesaj').AsString;
+        chatEkrani.Text=ilanMesaj;
+      }
+      else
+      {
+        ShowMessage('mesaj bulunamadı.');
+      }
+    except
+      ShowMessage('HATA '+LastExceptionMessage);
+      selectQuery.Free;
+      selectQuery.Close;
+    }
+  
+ Clomosy.GlobalVariableString = chatEkrani.Text; //BURASI OLMADI.
+*/
+ MyForm.SetImage(BtnSend,'https://clomosy.com/educa/send.png'); 
+ MyForm.AddNewEvent(BtnSend,tbeOnClick,'BtnSendClick');
+ 
+ if (Clomosy.PlatformIsMobile)
+  MyForm.Run;
+ else
+  MyForm.RunModal;
+ 
+}

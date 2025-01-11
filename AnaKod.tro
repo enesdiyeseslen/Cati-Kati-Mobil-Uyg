@@ -1,0 +1,845 @@
+// Enes HARMANCI - Çatı Katı Projesi
+
+var
+ MyForm, uyeForm, AnaEkranForm, evimeArkAraForm, kalacakYerAraForm, secilenVeriFormu, sifremiUnuttumForm, DmForm :TclForm;
+ AnaLayout, IsimLayout,LogoLayout,EditLayout, ButonLayout, BottomLayout, ComboBoxLayout : TclLayout;
+ logo : TclImage;
+ girisButton, uyeButton, uyeOlButton, AramaButon, sifremiUnuttumBtn, DM : TClProButton;
+ girisKullaniciAd,girisSifre, uyeKullaniciAd, uyeIsim, uyeSoyisim, uyeSifre, uyeSifre2, FiyatEdit, isimEdit, okulEdit, giderlerEdit, iletisimEdit, sifremiUnuttumKelime, SifreGuncelleKullaniciAdi, SifreGuncelleSifresi, SifreGuncelleKelimesi : TclEdit;
+ uygIsmi, SehirSeciniz, IlceSeciniz, RadioLabel : TclLabel;
+ SehirSec, IlceSec : TClComboBox;
+ EvArkadasiRadio,KalacakYerRadio : TClRadioButton;
+ secilenSehirIndex, secilenIlceIndex, secilenSehirIndex1, ilanMesaj, mesajEkrani : String;
+ listView, listViewDM : TCLListView;
+ Chat :TclUnit;
+ ilanID, girisYapanID, ilanSahipID,ChatID: Integer;  //girisYapanID giriş yapan dolayısıyla ilanı veren veya mesajı atan kişi olucak.
+ strList : TclStringList;
+ insertQuery,selectQuery,ilIlceSorgu,clDataQuery,VeriSorgusu : TclSqlQuery;
+ 
+ //kullanıcı üye olmak için bilgilerini tam girdi mi? kontrolünden sonra üye ol butonuna bastığında istenilen bilgilerin veri tabanına kaydedilme işlemi.
+ void uyeOlunca;
+{
+  if((uyeKullaniciAd.Text=='') || (uyeSifre.Text=='') || (uyeIsim.Text=='') || (uyeSoyisim.Text=='') || (sifremiUnuttumKelime.Text==''))
+  {
+     ShowMessage('BOŞ KUTUCUKLARI DOLDURUNUZ!');
+  }
+  else
+  {
+    try
+    
+      Clomosy.DBSQLServerQuery.Sql.Text = 'INSERT INTO kullanicilar (KullaniciAd, Sifre, Isim, SoyIsim, SifremiUnuttumKelimesi) VALUES ('+QuotedStr(uyeKullaniciAd.Text)+', '+QuotedStr(uyeSifre.Text)+','+QuotedStr(uyeIsim.Text)+',' +QuotedStr(uyeSoyisim.Text)+',' +QuotedStr(sifremiUnuttumKelime.Text)+')';
+      Clomosy.DBSQLServerQuery.ExecSql;
+      ShowMessage('Kayıt olma işleminiz başarıyla gerçekleşti. Çatı Katı ailesine hoş geldiniz.. :)');
+    
+    except
+    
+      ShowMessage('Kayıt olma işlemi başarısız!!');
+    }
+  }
+}
+
+//kullanıcı ilk ekranda üye olmak için olan butona tıklandığında gelecek olan form ekranı.
+ void uyeOlTiklama;
+{
+   uyeForm = TclForm.Create(Self);
+   uyeForm.SetFormColor('#ffffff', '#5c5c5c', clGVertical);
+   
+  // form içi düzenlemek için ana Layout.
+  AnaLayout = uyeForm.AddNewLayout(uyeForm,'AnaLayout');
+  AnaLayout.Align = alClient;
+  
+  // uygulama isminin bulunduğu kısım.
+  IsimLayout = uyeForm.AddNewLayout(AnaLayout,'IsimLayout');
+    IsimLayout.Align = alTop;
+    IsimLayout.Height = AnaLayout.Height*10/100;
+    
+        uygIsmi= uyeForm.AddNewLabel(IsimLayout,'uygIsmi','ÇATI KATI');
+        uygIsmi.Align = alCenter;
+        uygIsmi.StyledSettings = ssFamily;
+        uygIsmi.TextSettings.Font.Style = fsItalic; //italic yazınca bold yapıyor, o yüzden böyle kullanıldı.
+        uygIsmi.TextSettings.FontColor = clAlphaColor.clHexToColor('#5d0c1d ');
+        uygIsmi.TextSettings.Font.Size=15;
+  
+  // butonların olduğu kısım.
+  ButonLayout = uyeForm.AddNewLayout(AnaLayout,'ButonLayout');
+    ButonLayout.Align = alTop;
+    ButonLayout.Height = AnaLayout.Height*20/100;
+    
+      uyeOlButton= uyeForm.AddNewProButton(ButonLayout,'uyeOlButton','Kayıt Ol');
+        clComponent.SetupComponent(uyeOlButton,'{
+            "Align" : "Center",
+            "TextColor":"#cccccc", 
+            "BackgroundColor":"#5d0c1d", 
+            "TextSize":15,
+            "RoundHeight":10,
+            "RoundWidth":10,
+            "TextBold":"yes"
+          }');
+          uyeOlButton.Height = ButonLayout.Height*25/100;
+          uyeOlButton.Width = ButonLayout.Width*20/100;
+      
+        uyeForm.AddNewEvent(uyeOlButton,tbeOnClick,'ShowMessage(''Üye Olundu'');');
+  
+  // editlerin olduğu kısım.
+  EditLayout = uyeForm.AddNewLayout(AnaLayout,'EditLayout');
+    EditLayout.Align = alTop;
+    EditLayout.Height = AnaLayout.Height*25/100;
+      
+      uyeKullaniciAd= uyeForm.AddNewEdit(EditLayout,'uyeKullaniciAd','Kullanıcı Adınızı Giriniz.');
+        uyeKullaniciAd.TextSettings.Font.Size=70;
+        uyeKullaniciAd.Height = AnaLayout.Height*4/100;
+        uyeKullaniciAd.Width = EditLayout.Width*70/100;
+        uyeKullaniciAd.Align = alCenter;
+        uyeKullaniciAd.Margins.bottom= EditLayout.Height*40/100;
+    
+      uyeSifre= uyeForm.AddNewEdit(EditLayout,'uyeSifre','Şifrenizi Giriniz.');
+        uyeSifre.TextSettings.Font.Size=70;
+        uyeSifre.Height = AnaLayout.Height*4/100;
+        uyeSifre.Width = EditLayout.Width*70/100;
+        uyeSifre.Align = alCenter;
+        uyeSifre.Margins.Top= EditLayout.Height*20/100;
+        uyeSifre.Margins.bottom= EditLayout.Height*20/100;
+       
+      uyeIsim= uyeForm.AddNewEdit(EditLayout,'uyeIsim','Adınızı Giriniz.');
+        uyeIsim.TextSettings.Font.Size=70;
+        uyeIsim.Height = AnaLayout.Height*4/100;
+        uyeIsim.Width = EditLayout.Width*70/100;
+        uyeIsim.Align = alCenter;
+        uyeIsim.Margins.Top= EditLayout.Height*40/100;
+     
+      uyeSoyisim= uyeForm.AddNewEdit(EditLayout,'uyeSoyisim','Soyadınızı Giriniz.');
+        uyeSoyisim.TextSettings.Font.Size=70;
+        uyeSoyisim.Height = AnaLayout.Height*4/100;
+        uyeSoyisim.Width = EditLayout.Width*70/100;
+        uyeSoyisim.Align = alCenter;
+        uyeSoyisim.Margins.Top= EditLayout.Height*80/100;
+        
+      sifremiUnuttumKelime= uyeForm.AddNewEdit(EditLayout,'sifremiUnuttumKelime','ŞİFRENİZİ UNUTTUĞUNUZDA İHTİYACINIZ OLACAK OLAN KELİME..!');
+        sifremiUnuttumKelime.TextSettings.Font.Size=70;
+        sifremiUnuttumKelime.Height = AnaLayout.Height*4/100;
+        sifremiUnuttumKelime.Width = EditLayout.Width*70/100;
+        sifremiUnuttumKelime.Align = alCenter;
+        sifremiUnuttumKelime.Margins.Top= EditLayout.Height*115/100;
+  
+  // logonun olduğu kısım. 
+  LogoLayout = uyeForm.AddNewLayout(AnaLayout,'LogoLayout');
+    LogoLayout.Align = alTop;
+    LogoLayout.Height = AnaLayout.Height*15/100;
+      
+      logo= uyeForm.AddNewImage(LogoLayout,'logo');
+      logo.Align = alCenter;
+      logo.Height=100;
+      logo.Width=100;
+        uyeForm.setImage(logo,'https://i.imgur.com/EVtSh80.jpeg'); //TAMAMDIR BU
+   
+  uyeForm.Run;
+  uyeForm.AddNewEvent(uyeOlButton,tbeOnClick,'uyeOlunca');
+}
+
+//şifremi unuttum butonuna basıldığında gelecek olan form ekranı.
+void SifremiUnuttumClick;
+var
+  GuncelleBtn: TClProButton;
+{
+  sifremiUnuttumForm = TclForm.Create(Self);
+   sifremiUnuttumForm.SetFormColor('#ffffff', '#5c5c5c', clGVertical);
+   
+  // form içi düzenlemek için ana Layout.
+  AnaLayout = sifremiUnuttumForm.AddNewLayout(sifremiUnuttumForm,'AnaLayout');
+  AnaLayout.Align = alClient;
+  
+  // uygulama isminin bulunduğu kısım.
+  IsimLayout = sifremiUnuttumForm.AddNewLayout(AnaLayout,'IsimLayout');
+    IsimLayout.Align = alTop;
+    IsimLayout.Height = AnaLayout.Height*10/100;
+    
+        uygIsmi= sifremiUnuttumForm.AddNewLabel(IsimLayout,'uygIsmi','ÇATI KATI');
+        uygIsmi.Align = alCenter;
+        uygIsmi.StyledSettings = ssFamily;
+        uygIsmi.TextSettings.Font.Style = fsItalic; //italic yazınca bold yapıyor, o yüzden böyle kullanıldı.
+        uygIsmi.TextSettings.FontColor = clAlphaColor.clHexToColor('#5d0c1d ');
+        uygIsmi.TextSettings.Font.Size=15;
+  
+  // butonların olduğu kısım.
+  ButonLayout = sifremiUnuttumForm.AddNewLayout(AnaLayout,'ButonLayout');
+    ButonLayout.Align = alTop;
+    ButonLayout.Height = AnaLayout.Height*20/100;
+    
+      GuncelleBtn= sifremiUnuttumForm.AddNewProButton(ButonLayout,'GuncelleBtn','Şifremi Güncelle');
+        clComponent.SetupComponent(GuncelleBtn,'{
+            "Align" : "Center",
+            "TextColor":"#cccccc", 
+            "BackgroundColor":"#5d0c1d", 
+            "TextSize":15,
+            "RoundHeight":10,
+            "RoundWidth":10,
+            "TextBold":"yes"
+          }');
+          GuncelleBtn.Height = ButonLayout.Height*25/100;
+          GuncelleBtn.Width = ButonLayout.Width*20/100;
+      
+        sifremiUnuttumForm.AddNewEvent(GuncelleBtn,tbeOnClick,'ShowMessage(''Üye Olundu'');');
+  
+  // editlerin olduğu kısım.
+  EditLayout = sifremiUnuttumForm.AddNewLayout(AnaLayout,'EditLayout');
+    EditLayout.Align = alTop;
+    EditLayout.Height = AnaLayout.Height*25/100;
+      
+      SifreGuncelleKullaniciAdi= sifremiUnuttumForm.AddNewEdit(EditLayout,'SifreGuncelleKullaniciAdi','Kullanıcı Adınızı Giriniz.');
+        SifreGuncelleKullaniciAdi.TextSettings.Font.Size=70;
+        SifreGuncelleKullaniciAdi.Height = AnaLayout.Height*4/100;
+        SifreGuncelleKullaniciAdi.Width = EditLayout.Width*70/100;
+        SifreGuncelleKullaniciAdi.Align = alCenter;
+        SifreGuncelleKullaniciAdi.Margins.bottom= EditLayout.Height*40/100;
+    
+      SifreGuncelleSifresi= sifremiUnuttumForm.AddNewEdit(EditLayout,'SifreGuncelleSifresi','Yeni Şifrenizi Giriniz.');
+        SifreGuncelleSifresi.TextSettings.Font.Size=70;
+        SifreGuncelleSifresi.Height = AnaLayout.Height*4/100;
+        SifreGuncelleSifresi.Width = EditLayout.Width*70/100;
+        SifreGuncelleSifresi.Align = alCenter;
+        SifreGuncelleSifresi.Margins.Top= EditLayout.Height*20/100;
+        SifreGuncelleSifresi.Margins.bottom= EditLayout.Height*20/100;
+        SifreGuncelleSifresi.Password = True;
+       
+      SifreGuncelleKelimesi= sifremiUnuttumForm.AddNewEdit(EditLayout,'SifreGuncelleKelimesi','Şifremi Unuttum Kelimenizi Giriniz.');
+        SifreGuncelleKelimesi.TextSettings.Font.Size=70;
+        SifreGuncelleKelimesi.Height = AnaLayout.Height*4/100;
+        SifreGuncelleKelimesi.Width = EditLayout.Width*70/100;
+        SifreGuncelleKelimesi.Align = alCenter;
+        SifreGuncelleKelimesi.Margins.Top= EditLayout.Height*40/100;
+  
+  // logonun olduğu kısım. 
+  LogoLayout = sifremiUnuttumForm.AddNewLayout(AnaLayout,'LogoLayout');
+    LogoLayout.Align = alTop;
+    LogoLayout.Height = AnaLayout.Height*15/100;
+      
+      logo= sifremiUnuttumForm.AddNewImage(LogoLayout,'logo');
+      logo.Align = alCenter;
+      logo.Height=100;
+      logo.Width=100;
+        sifremiUnuttumForm.setImage(logo,'https://i.imgur.com/EVtSh80.jpeg'); //TAMAMDIR BU
+   
+  sifremiUnuttumForm.Run;
+  sifremiUnuttumForm.AddNewEvent(GuncelleBtn,tbeOnClick,'SifreGuncelleme');
+}
+
+//şifre güncelleme işlemi.
+void SifreGuncelleme;
+{
+  if((SifreGuncelleKullaniciAdi.Text=='') || (SifreGuncelleSifresi.Text=='') || (SifreGuncelleKelimesi.Text==''))
+  {
+     ShowMessage('BOŞ KUTUCUKLARI DOLDURUNUZ!');
+  }
+  else
+  {
+    try 
+      selectQuery.Connection=Clomosy.DBSQLServerConnection;
+      selectQuery.Sql.Text='SELECT KullaniciAd, SifremiUnuttumKelimesi FROM kullanicilar WHERE KullaniciAd='+QuotedStr(SifreGuncelleKullaniciAdi.Text)+' AND SifremiUnuttumKelimesi ='+QuotedStr(SifreGuncelleKelimesi.Text);
+      selectQuery.Open;
+      if(selectQuery.Found)
+      {
+        // Update işlemi.
+        try
+          // Mevcut mesajı güncelle
+          Clomosy.DBSQLServerQuery.Sql.Text ='UPDATE kullanicilar SET Sifre ='+QuotedStr(SifreGuncelleSifresi.Text)+' WHERE KullaniciAd = '+QuotedStr(SifreGuncelleKullaniciAdi.Text)+' AND SifremiUnuttumKelimesi = '+QuotedStr(SifreGuncelleKelimesi.Text);
+          Clomosy.DBSQLServerQuery.ExecSql;
+          ShowMessage('Şifre Güncelleme İşlemi Başarıyla Gerçekleştirildi. :)');
+      
+          except
+      
+          ShowMessage('Şifre güncelleme işlemi başarısız oldu: ' + LastExceptionMessage);
+          }
+      }
+      else
+      {
+        ShowMessage('Kayıtlarda Kullanıcı Adı Veya Şifremi Unuttum Kelimeniz Bulunamadı. Lütfen Doğru Girildiğinden Emin Olun!');
+        
+      }
+      except
+        ShowMessage('Şifre Güncelleme İşlemi Başarısız!!');
+      }
+  }
+}
+
+
+//kullanıcının yüklemek istediği ev bilgilerini boşluk olmayacak şekilde girilmesini kontrol eden ve veri tabanına kaydeden işlem. 
+void yukleButonuTiklama;
+{
+    secilenSehirIndex = SehirSec.GetValueIndex(SehirSec.ItemIndex);
+    secilenIlceIndex = IlceSec.GetValueIndex(IlceSec.ItemIndex);
+  try
+  
+    if((FiyatEdit.Text=='') || (isimEdit.Text=='') || (okulEdit.Text=='') || (giderlerEdit.Text=='') || (iletisimEdit.Text==''))
+    {
+      ShowMessage('BOŞ KUTUCUKLARI DOLDURUNUZ!');
+    }
+    else
+    {       
+      
+      Clomosy.DBSQLServerQuery.Sql.Text = 'INSERT INTO YuklenenEvler (Fiyat, İsimSoyisim, OkulBolum , EvGiderleri, iletisim, sehirid, ilceid, ilanSahipID) VALUES ('+QuotedStr('FİYAT: '+FiyatEdit.Text + 'TL')+', '+QuotedStr('İsim: ' + isimEdit.Text)+','+QuotedStr( 'Bölüm: ' + okulEdit.Text)+',' +QuotedStr( 'Giderler: ' + giderlerEdit.Text)+','+QuotedStr( 'İletişim: ' + iletisimEdit.Text)+','+secilenSehirIndex+','+secilenIlceIndex+','+IntToStr(girisYapanID)+')';
+      Clomosy.DBSQLServerQuery.ExecSql;
+      ShowMessage('Yükleme İşlemi Başarılı');
+    }
+  
+  except
+  
+    ShowMessage('Yükleme İşlemi Başarısız!!' + LastExceptionMessage);
+  }
+}
+
+//kullanıcının yüklediği ev bilgilerini listView'de göstermek için kayıtları çekme ve yazdırma işlemi.
+void addDataToListView;
+{
+  try
+    selectQuery.Sql.Text = 'SELECT ID as RECORD_GUID, Fiyat as MAIN_TEXT, EvGiderleri as SUB_TEXT, iletisim as FOOTER_TEXT FROM YuklenenEvler WHERE sehirid ='+secilenSehirIndex1;
+    selectQuery.Open;
+      if(selectQuery.Found)
+      {
+        listView.clLoadListViewDataFromDataset(selectQuery);
+        kalacakYerAraForm.Run;
+      }
+      else
+      {
+        ShowMessage('Bu Şehir İçin Kayıt Bulunamadı!');
+      }
+  
+  except
+  
+    ShowMessage('HATA');
+    selectQuery.Free;
+    selectQuery.Close;
+  }
+  
+}
+
+//kullanıcının DM'leri. Giriş yapan kişiye atılan mesajları ayrı chatID numarasına göre çekiyoruz listeye. Atan kişinin ID'si görünecek. Sonralarda isim görünecek.
+void addDataToListViewDM;
+{
+  try
+    selectQuery.Sql.Text = 'SELECT chatID as RECORD_GUID, mesajAtan as MAIN_TEXT FROM Chat WHERE mesajAlan ='+IntToStr(girisYapanID);
+    selectQuery.Open;
+      if(selectQuery.Found)
+      {
+        listViewDM.clLoadListViewDataFromDataset(selectQuery);
+        DmForm.Run;
+      }
+      else
+      {
+        ShowMessage('Mesaj Bulunamadı!');
+      }
+
+  except
+  
+    ShowMessage('HATA '+LastExceptionMessage);
+    selectQuery.Free;
+    selectQuery.Close;
+  }
+}
+
+//listView'de yüklenen eve tıklandığında, evi verenin ID'nosunu alma işlemi ve chat ekranına yönlendirme işlemi.
+void ListViewItemClick;
+{
+  //ilanın girisYapanID numarasını dolayısıyla o evi yükleyenin ID numarasını almış olduk. Onları bağlantılı yaptığım için çünkü mesajı alan kişi gerekli.!
+  ilanID=listView.clSelectedItemData('RECORD_GUID'); 
+
+  strList.Insert(1,IntToStr(ilanID));
+  ShowMessage('ilan ıd: '+IntToStr(Clomosy.StringListItemString(strList,1)));
+  
+  Clomosy.RunUnit('Chat');
+}
+
+//kullanıcı il ve ilçe seçimini yaptıktan sonra radioButon ile seçtiği seçeneğe göre getirilecek formun kontrolu yapılması ve form oluşturulması.
+void AramaButtonTiklaninca;
+var 
+  yukleBtn: TClProButton;
+  testLabel: TclLabel;
+{
+  VeriSorgusu= TclSQLQuery.Create(Nil);
+  secilenSehirIndex1 = SehirSec.GetValueIndex(SehirSec.ItemIndex);
+  
+  if(EvArkadasiRadio.isChecked == True)
+  {
+    evimeArkAraForm = TclForm.Create(Self);
+    evimeArkAraForm.SetFormColor('#ffffff', '#5c5c5c', clGVertical);
+    
+    testLabel= evimeArkAraForm.AddNewLabel(evimeArkAraForm,'testLabel','EV BİLGİLERİNİZİ GİRİNİZ.!');
+      testLabel.TextSettings.FontColor = clAlphaColor.clHexToColor('#000000');
+      testLabel.StyledSettings = ssFamily;
+      testLabel.TextSettings.Font.Size=20;
+      testLabel.Align = alCenter;
+      testLabel.Margins.Left= 30;
+      testLabel.Margins.bottom= 400;
+      testLabel.Height = 50;
+      testLabel.Width = 300;
+      testLabel.TextSettings.Font.Style = fsItalic; //italic yazınca bold yapıyor, o yüzden böyle kullanıldı.
+     
+    FiyatEdit= evimeArkAraForm.AddNewEdit(evimeArkAraForm,'FiyatEdit','Fiyat Giriniz.');
+      FiyatEdit.clTypeOfField = taFloat;
+      FiyatEdit.TextSettings.Font.Size=70;
+      FiyatEdit.Height = 40;
+      FiyatEdit.Width = 270;
+      FiyatEdit.Align = alCenter;
+      FiyatEdit.Margins.Top= 10;
+      FiyatEdit.Margins.bottom= 300;
+      
+    isimEdit= evimeArkAraForm.AddNewEdit(evimeArkAraForm,'isimEdit','İsim Soyisim Giriniz.');
+      isimEdit.TextSettings.Font.Size=70;
+      isimEdit.Height = 40;
+      isimEdit.Width = 270;
+      isimEdit.Align = alCenter;
+      isimEdit.Margins.Top= 10;
+      isimEdit.Margins.bottom= 200;
+      
+    okulEdit= evimeArkAraForm.AddNewEdit(evimeArkAraForm,'okulEdit','Okul/Bölüm Giriniz.');
+      okulEdit.TextSettings.Font.Size=70;
+      okulEdit.Height = 40;
+      okulEdit.Width = 270;
+      okulEdit.Align = alCenter;
+      okulEdit.Margins.Top= 10;
+      okulEdit.Margins.bottom= 100;
+      
+    giderlerEdit= evimeArkAraForm.AddNewEdit(evimeArkAraForm,'giderlerEdit','Ev Giderlerini Giriniz.');
+      giderlerEdit.TextSettings.Font.Size=70;
+      giderlerEdit.Height = 40;
+      giderlerEdit.Width = 270;
+      giderlerEdit.Align = alCenter;
+      giderlerEdit.Margins.Top= 10;
+      giderlerEdit.Margins.bottom= 0;
+      
+    iletisimEdit= evimeArkAraForm.AddNewEdit(evimeArkAraForm,'iletisimEdit','İletişim Bilgilerinizi Giriniz.');
+      iletisimEdit.TextSettings.Font.Size=70;
+      iletisimEdit.Height = 40;
+      iletisimEdit.Width = 270;
+      iletisimEdit.Align = alCenter;
+      iletisimEdit.Margins.Top= 10;
+      iletisimEdit.Margins.bottom= -100;
+      
+    yukleBtn= evimeArkAraForm.AddNewProButton(evimeArkAraForm,'yukleBtn','Yükle');
+      clComponent.SetupComponent(yukleBtn,'{
+          "TextColor":"#cccccc", 
+          "BackgroundColor":"#5d0c1d", 
+          "TextSize":15,
+          "RoundHeight":10,
+          "RoundWidth":10,
+          "TextBold":"yes"
+        }');
+          yukleBtn.Align = alCenter;
+          yukleBtn.Height = evimeArkAraForm.clHeight*5/100;
+          yukleBtn.Margins.Top= evimeArkAraForm.clHeight*45/100;
+        
+    evimeArkAraForm.AddNewEvent(yukleBtn,tbeOnClick,'yukleButonuTiklama');
+    
+    evimeArkAraForm.Run; 
+  }
+  else if(KalacakYerRadio.isChecked == True)
+  {
+    kalacakYerAraForm = TclForm.Create(Self);
+    listView = kalacakYerAraForm.AddNewListView(kalacakYerAraForm,'listView');
+    listView.Align=alClient;
+    
+    addDataToListView;
+    
+    kalacakYerAraForm.AddNewEvent(listView,tbeOnItemClick,'ListViewItemClick');
+  }
+  else
+  {
+    ShowMessage('Lütfen yapmak istediğiniz işlemi seçiniz..')
+  }
+}
+
+//Veri tabanında olan il kayıtlarının ComboBox'a yazdırılması.
+void sehirEkleme;
+{
+  clDataQuery = TclSQLQuery.Create(Nil);
+ 
+  try
+    clDataQuery = Clomosy.DBSQLServerQueryWith('SELECT id,sehiradi FROM iller');
+    clDataQuery.Open;
+    while (not clDataQuery.Eof)
+    {
+      SehirSec.AddItem(clDataQuery.FieldByName('sehiradi').AsString,clDataQuery.FieldByName('id').AsString);
+      clDataQuery.Next;
+    }
+  finally
+    clDataQuery.Free;
+  }
+}
+
+//Veri tabanında olan ilçe kayıtlarının il'e göre ComboBox'a yazdırılması.
+void ilceYukleme(gelenID);
+var
+  clDataQuery2 :TclSQLQuery;
+{
+    clDataQuery2 = TclSQLQuery.Create(Nil);
+   
+    IlceSec.Clear;
+    try
+      clDataQuery2 = Clomosy.DBSQLServerQueryWith('SELECT * FROM ilceler WHERE sehirid = '+gelenID+'');
+      clDataQuery2.Open;
+  
+      while (not clDataQuery2.Eof)
+      {
+        IlceSec.AddItem(clDataQuery2.FieldByName('ilceadi').AsString,clDataQuery2.FieldByName('id').AsString);
+        clDataQuery2.Next;
+      }
+    finally
+      clDataQuery2.Free;
+    }
+}
+
+void sehirChanged;
+var
+   strValue,strKey,strKey2 : String;
+{
+   strValue = SehirSec.GetValueIndex(SehirSec.ItemIndex);
+   strKey = SehirSec.GetItemIndex(SehirSec.ItemIndex);
+   strKey2 = SehirSec.Items[SehirSec.ItemIndex];
+
+   ilceYukleme(strValue);
+   //ShowMessage('strValue : '+strValue); //value1
+   //ShowMessage('strKey : '+strKey); //key
+   //ShowMessage('strKey2 : '+strKey2); //key
+   //ShowMessage('Combo1.ItemIndex : '+IntToStr(Combo1.ItemIndex)); //index
+}
+
+//DM kutusundan seçilen chat'in açılması.
+void DmSelectedClick;
+{
+  ShowMessage('seçili mesaja tıklanacak!');
+  ChatID=listViewDM.clSelectedItemData('RECORD_GUID');
+  ShowMessage('seçilenin chat id numarası: '+ChatID);
+  
+  
+  /*
+  //mesajı alan göre mesajları ekrana getirmesi. BURASI OLMADI.
+  try
+    selectQuery.Sql.Text = 'SELECT mesaj FROM Chat WHERE mesajAlan = '+QuotedStr(girisYapanID);
+    selectQuery.Open;
+      if(selectQuery.Found)
+      {
+        ilanMesaj = selectQuery.FieldByName('mesaj').AsString;
+        ShowMessage(ilanMesaj);
+        mesajEkrani=ilanMesaj;
+      }
+      else
+      {
+        ShowMessage('mesaj bulunamadı.');
+      }
+    except
+      ShowMessage('HATA '+LastExceptionMessage);
+      selectQuery.Free;
+      selectQuery.Close;
+    }
+    */
+}
+
+//gelen kutusu butonuna tıklanması.
+void DM_tiklama;
+{
+  DmForm = TclForm.Create(Self);
+  DmForm.SetFormColor('#ffffff', '#5c5c5c', clGVertical);
+  
+  listViewDM = DmForm.AddNewListView(DmForm,'listViewDM');
+    listViewDM.Align=alClient;
+  
+  addDataToListViewDM;
+  
+  DmForm.AddNewEvent(listViewDM,tbeOnItemClick,'DmSelectedClick');
+    
+}
+
+//Kullanıcı tarafından girilen kullanıcı adı ve şifresinin doğruluğunun kontrol edilmesi ve ana ekran sayfasının oluşturulması.
+void girisYapTiklama;
+{
+  try 
+  selectQuery.Connection=Clomosy.DBSQLServerConnection;
+  selectQuery.Sql.Text='SELECT ID, KullaniciAd, Sifre FROM kullanicilar WHERE KullaniciAd='+QuotedStr(girisKullaniciAd.Text)+' AND Sifre ='+QuotedStr(girisSifre.Text);
+  selectQuery.Open;
+  
+    if(selectQuery.Found)
+    {
+      //giriş yapan kişinin ID'sini aldık. Çünkü ev yüklerse bu ID ile yüklediği evin SAHİBİNİN İD'si belirlenmiş olacak. Ya da Msj atarken msjAtan kişi olcak.
+      girisYapanID = selectQuery.FieldByName('ID').AsInteger;
+      
+      strList.Insert(0,IntToStr(girisYapanID));
+      ShowMessage('Kullanıcı ıd: '+IntToStr(Clomosy.StringListItemString(strList,0)));
+            
+      AnaEkranForm = TclForm.Create(Self);
+      AnaEkranForm.SetFormColor('#ffffff', '#5c5c5c', clGVertical);
+    
+    // form içi düzenlemek için ana Layout.
+    AnaLayout = AnaEkranForm.AddNewLayout(AnaEkranForm,'AnaLayout');
+    AnaLayout.Align = alClient;
+    
+    // uygulama isminin bulunduğu kısım.
+    IsimLayout = AnaEkranForm.AddNewLayout(AnaLayout,'IsimLayout');
+      IsimLayout.Align = alTop;
+      IsimLayout.Height = AnaLayout.Height*10/100;
+      
+        uygIsmi= AnaEkranForm.AddNewLabel(IsimLayout,'uygIsmi','ÇATI KATI');
+        uygIsmi.Align = alCenter;
+        uygIsmi.StyledSettings = ssFamily;
+        uygIsmi.TextSettings.Font.Style = fsItalic;
+        uygIsmi.TextSettings.FontColor = clAlphaColor.clHexToColor('#5d0c1d');
+        uygIsmi.TextSettings.Font.Size=15;
+        
+    // logonun olduğu kısım.    
+    LogoLayout = AnaEkranForm.AddNewLayout(AnaLayout,'LogoLayout');
+      LogoLayout.Align = alTop;
+      LogoLayout.Height = AnaLayout.Height*15/100;
+        logo= AnaEkranForm.AddNewImage(LogoLayout,'logo');
+        logo.Align = alCenter;
+        logo.Height=100;
+        logo.Width=100;
+        MyForm.setImage(logo,'https://i.imgur.com/EVtSh80.jpeg');
+        
+    // ComboBox ve RadioButonların olduğu kısım.
+    ComboBoxLayout = AnaEkranForm.AddNewLayout(AnaLayout,'ComboBoxLayout');
+      ComboBoxLayout.Align = alCenter;
+      ComboBoxLayout.Height = AnaLayout.Height*60/100;
+    
+      SehirSeciniz= AnaEkranForm.AddNewLabel(ComboBoxLayout,'SehirSeciniz','Şehir Seçiniz..'); //Şehir Seçiniz Label
+       SehirSeciniz.Width = ComboBoxLayout.Height*50/100;
+       SehirSeciniz.Align = alCenter;
+       SehirSeciniz.StyledSettings = ssFamily;
+       SehirSeciniz.TextSettings.Font.Style = fsItalic;
+       SehirSeciniz.TextSettings.FontColor = clAlphaColor.clHexToColor('#000000');
+       SehirSeciniz.TextSettings.Font.Size=15;
+         SehirSeciniz.Margins.bottom=ComboBoxLayout.Height*45/100;
+       
+      
+      SehirSec = AnaEkranForm.AddNewComboBox(ComboBoxLayout,'SehirSec'); // Şehir ComboBox
+       SehirSec.Align = alCenter;
+       SehirSec.Width = ComboBoxLayout.Width*70/100;
+       SehirSec.Margins.Top=ComboBoxLayout.Height*15/100;
+       SehirSec.Margins.bottom=ComboBoxLayout.Height*45/100;
+       sehirEkleme;
+        AnaEkranForm.AddNewEvent(SehirSec,tbeOnChange,'sehirChanged'); //ComboBox'ta herhangi bir şehir yazıldığında çalışan olay.
+      //testCombo.GetItemIndex(testCombo.ItemIndex) seçilen indeksi belirtir buna göre sorgu yazarız void'de
+      
+      IlceSeciniz= AnaEkranForm.AddNewLabel(ComboBoxLayout,'IlceSeciniz','İlçe Seçiniz..'); //İlçe Seçiniz Label
+        IlceSeciniz.Align = alCenter;
+        IlceSeciniz.Width = ComboBoxLayout.Height*50/100;
+        IlceSeciniz.StyledSettings = ssFamily;
+        IlceSeciniz.TextSettings.Font.Style = fsItalic;
+        IlceSeciniz.TextSettings.FontColor = clAlphaColor.clHexToColor('#000000');
+        IlceSeciniz.TextSettings.Font.Size=15;
+       
+        IlceSeciniz.Margins.Top=ComboBoxLayout.Height*30/100;
+        IlceSeciniz.Margins.bottom=ComboBoxLayout.Height*45/100;
+        
+        
+      IlceSec = AnaEkranForm.AddNewComboBox(ComboBoxLayout,'IlceSec'); // İlçe ComboBox
+       IlceSec.Align = alCenter;
+       IlceSec.Width = ComboBoxLayout.Width*70/100;
+       IlceSec.Margins.Top=ComboBoxLayout.Height*15/100;
+       IlceSec.Margins.bottom=ComboBoxLayout.Height*15/100;
+      
+        
+      RadioLabel= AnaEkranForm.AddNewLabel(ComboBoxLayout,'RadioLabel','Ne Arıyorsun?'); //Şehir Seçiniz Label
+        RadioLabel.Align = alCenter;
+        RadioLabel.Width = ComboBoxLayout.Height*50/100;
+        RadioLabel.StyledSettings = ssFamily;
+        RadioLabel.TextSettings.Font.Style = fsItalic;
+        RadioLabel.TextSettings.FontColor = clAlphaColor.clHexToColor('#000000');
+        RadioLabel.TextSettings.Font.Size=15;
+        RadioLabel.Margins.Top=ComboBoxLayout.Height*25/100;
+       
+       
+      EvArkadasiRadio = AnaEkranForm.AddNewRadioButton(ComboBoxLayout,'EvArkadasiRadio','Evime Arkadaş Arıyorum.');
+       EvArkadasiRadio.StyledSettings = ssFamily;
+       EvArkadasiRadio.TextSettings.Font.Size=15;
+       EvArkadasiRadio.TextSettings.Font.Style = fsItalic;
+       EvArkadasiRadio.TextSettings.FontColor = clAlphaColor.clHexToColor('#000000');
+       EvArkadasiRadio.Align = alCenter;
+       EvArkadasiRadio.Width = 300;
+       EvArkadasiRadio.Margins.Top=ComboBoxLayout.Height*45/100;
+       
+       
+      KalacakYerRadio = AnaEkranForm.AddNewRadioButton(AnaEkranForm,'KalacakYerRadio','Kalacak Ev Arıyorum.');
+       KalacakYerRadio.StyledSettings = ssFamily;
+       KalacakYerRadio.TextSettings.Font.Size=15;
+       KalacakYerRadio.TextSettings.Font.Style = fsItalic;
+       KalacakYerRadio.TextSettings.FontColor = clAlphaColor.clHexToColor('#000000');
+       KalacakYerRadio.Align = alCenter;
+       KalacakYerRadio.Width = 300;
+       KalacakYerRadio.Margins.Top=ComboBoxLayout.Height*55/100;
+    
+    // Ara butonun olduğu kısım.   DM
+    BottomLayout = AnaEkranForm.AddNewLayout(AnaLayout,'BottomLayout');
+      BottomLayout.Align = alBottom;
+      BottomLayout.Height = AnaEkranForm.clHeight*25/100;
+      
+        AramaButon= AnaEkranForm.AddNewProButton(BottomLayout,'AramaButon','Ara');
+          clComponent.SetupComponent(AramaButon,'{
+            "TextColor":"#cccccc", 
+            "BackgroundColor":"#5d0c1d", 
+            "TextSize":15,
+            "RoundHeight":10,
+            "RoundWidth":10,
+            "TextBold":"yes"
+          }');
+          
+          AramaButon.Align = alCenter;
+          AramaButon.Height = BottomLayout.Height*20/100;
+          AramaButon.Margins.bottom=BottomLayout.Height*60/100;
+    
+        AnaEkranForm.AddNewEvent(AramaButon,tbeOnClick,'AramaButtonTiklaninca');
+        
+        DM= AnaEkranForm.AddNewProButton(BottomLayout,'DM','Gelen Kutusu');
+          clComponent.SetupComponent(DM,'{
+            "TextColor":"#cccccc", 
+            "BackgroundColor":"#5d0c1d", 
+            "TextSize":15,
+            "RoundHeight":10,
+            "RoundWidth":10,
+            "TextBold":"yes"
+          }');
+          
+          DM.Align = alCenter;
+          DM.Height = BottomLayout.Height*20/100;
+          DM.Margins.bottom=BottomLayout.Height*10/100;
+    
+        AnaEkranForm.AddNewEvent(DM,tbeOnClick,'DM_tiklama');
+        
+        
+    AnaEkranForm.Run;
+    }
+    
+    else
+    {
+      ShowMessage('Kullanıcı Adı veya Şifre HATALI');
+    }
+  except
+    ShowMessage('Kullanıcı ID alınamadı. HATA: '+LastExceptionMessage);
+  }
+}
+
+//Ana kod bloğu. 
+{
+
+  MyForm=TclForm.Create(Self);
+  MyForm.SetFormColor('#ffffff', '#5c5c5c', clGVertical);
+  
+  Chat = TclUnit.Create;
+  
+  strList =  Clomosy.StringListNew;
+  
+  // form içi düzenlemek için ana Layout.
+  AnaLayout = MyForm.AddNewLayout(MyForm,'AnaLayout');
+  AnaLayout.Align = alClient;
+  
+  // uygulama isminin bulunduğu kısım.
+  IsimLayout = MyForm.AddNewLayout(AnaLayout,'IsimLayout');
+    IsimLayout.Align = alTop;
+    IsimLayout.Height = AnaLayout.Height*10/100;
+      //Uygulama isim label.
+        uygIsmi= MyForm.AddNewLabel(IsimLayout,'uygIsmi','ÇATI KATI');
+        uygIsmi.Align = alCenter;
+        uygIsmi.StyledSettings = ssFamily;
+        uygIsmi.TextSettings.Font.Style = fsItalic; //italic yazınca bold yapıyor, o yüzden böyle kullanıldı.
+        uygIsmi.TextSettings.FontColor = clAlphaColor.clHexToColor('#5d0c1d');
+        uygIsmi.TextSettings.Font.Size=15;
+
+  // ilk ekranda butonların olduğu kısım. 
+  ButonLayout = MyForm.AddNewLayout(AnaLayout,'ButonLayout');
+    ButonLayout.Align = alTop;
+    ButonLayout.Height = AnaLayout.Height*20/100;
+
+    uyeButton= MyForm.AddNewProButton(ButonLayout,'uyeButton','Üye Ol');
+      clComponent.SetupComponent(uyeButton,'{
+          "TextColor":"#cccccc", 
+          "BackgroundColor":"#5d0c1d", 
+          "TextSize":15,
+          "RoundHeight":10,
+          "RoundWidth":10,
+          "TextBold":"yes"
+        }');
+       
+        uyeButton.Align = alCenter; 
+        uyeButton.Width = ButonLayout.Width*20/100;
+        uyeButton.Height = ButonLayout.Height*25/100;
+        uyeButton.Margins.Right= ButonLayout.Width*30/100;
+       
+        MyForm.AddNewEvent(uyeButton,tbeOnClick,'uyeOlTiklama');
+   
+    girisButton= MyForm.AddNewProButton(ButonLayout,'girisButton','Giriş Yap');
+      clComponent.SetupComponent(girisButton,'{
+          "TextColor":"#cccccc", 
+          "BackgroundColor":"#5d0c1d", 
+          "TextSize":15,
+          "RoundHeight":10,
+          "RoundWidth":10,
+          "TextBold":"yes"
+        }');
+        
+        girisButton.Align = alCenter;
+        girisButton.Width = ButonLayout.Width*20/100;
+        girisButton.Height = ButonLayout.Height*25/100;
+        girisButton.Margins.Left= ButonLayout.Width*30/100;
+     
+        MyForm.AddNewEvent(girisButton,tbeOnClick,'girisYapTiklama'); 
+        
+    sifremiUnuttumBtn= MyForm.AddNewProButton(ButonLayout,'sifremiUnuttumBtn','Şifremi Unuttum');
+      clComponent.SetupComponent(sifremiUnuttumBtn,'{
+          "TextColor":"#cccccc", 
+          "BackgroundColor":"#5d0c1d", 
+          "TextSize":15,
+          "RoundHeight":10,
+          "RoundWidth":10,
+          "TextBold":"yes"
+        }');
+        
+        sifremiUnuttumBtn.Align = alCenter;
+        sifremiUnuttumBtn.Width = ButonLayout.Width*20/100;
+        sifremiUnuttumBtn.Margins.Top= ButonLayout.Width*20/100;
+        //sifremiUnuttumBtn.Height = ButonLayout.Height*25/100;
+        //sifremiUnuttumBtn.Margins.Left= ButonLayout.Width*30/100;
+     
+        MyForm.AddNewEvent(sifremiUnuttumBtn,tbeOnClick,'SifremiUnuttumClick');
+  
+  // ilk ekranda editlerin olduğu kısım. 
+  EditLayout = MyForm.AddNewLayout(AnaLayout,'EditLayout');
+    EditLayout.Align = alTop;
+    EditLayout.Height = AnaLayout.Height*25/100;
+    
+      girisKullaniciAd= MyForm.AddNewEdit(EditLayout,'girisKullaniciAd','Kullanıcı Adınızı Giriniz.');
+        girisKullaniciAd.TextSettings.Font.Size=70;
+        girisKullaniciAd.Width = EditLayout.Width*60/100;
+        girisKullaniciAd.Align = alCenter;
+     
+      girisSifre= MyForm.AddNewEdit(EditLayout,'girisSifre','Şifrenizi Giriniz.');
+       girisSifre.TextSettings.Font.Size=70;
+       girisSifre.Width = EditLayout.Width*60/100;
+       girisSifre.Align = alCenter;
+       girisSifre.Margins.Top= EditLayout.Height*60/100;
+       girisSifre.Password = True;
+   
+  // ilk ekranda logonun olduğu kısım.
+  LogoLayout = MyForm.AddNewLayout(AnaLayout,'LogoLayout');
+    LogoLayout.Align = alTop;
+    LogoLayout.Height = AnaLayout.Height*15/100;
+      
+      logo= MyForm.AddNewImage(LogoLayout,'logo');
+      logo.Align = alCenter;
+      logo.Height=100;
+      logo.Width=100;
+        MyForm.setImage(logo,'https://i.imgur.com/EVtSh80.jpeg');
+  
+  Clomosy.GlobalVariableStringList = strList;
+  
+  mesajEkrani=Clomosy.GlobalVariableString;
+  
+  //Clomosy.GlobalVariableString = IntToStr(girisYapanID);
+  
+  //Clomosy.GlobalVariableInteger = IntToStr(ilanID);
+
+ insertQuery=TclSqlQuery.Create(nil);
+ Clomosy.DBSQLServerConnect('Sql Server', '192.168.1.187', 'sa', '12323123', 'Clomosy',8080);
+ insertQuery.Connection=Clomosy.DBSQLServerConnection;
+ 
+ selectQuery=TclSqlQuery.Create(nil);
+ selectQuery.Connection = Clomosy.DBSQLServerConnection;
+ 
+ MyForm.Run;
+}
